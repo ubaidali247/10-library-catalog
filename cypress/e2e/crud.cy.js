@@ -1,5 +1,5 @@
-// CRUD Tests - Library Catalog
-describe('CRUD Operations - Library Catalog', () => {
+// CRUD Tests - 10 Library Catalog
+describe('CRUD Operations - 10 Library Catalog', () => {
   beforeEach(() => {
     cy.visit('/');
     cy.get('.nav-link[data-page="books"]').click();
@@ -105,7 +105,7 @@ describe('CRUD Operations - Library Catalog', () => {
     cy.request({
       method: 'POST',
       url: '/api/books',
-      body: {"title":"Test Book","author":"Test Author","isbn":"978-1234567890","genre":"Fiction","year":"2023","status":"available","description":"A test book for research"},
+      body: {"title": "Test Book", "author": "Test Author", "isbn": "978-1234567890", "genre": "Fiction", "year": "2023", "status": "available", "description": "A test book"},
     }).its('status').should('eq', 201);
   });
 
