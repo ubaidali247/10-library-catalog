@@ -1,5 +1,9 @@
-// CRUD Tests - 10 Library Catalog
-describe('CRUD Operations - 10 Library Catalog', () => {
+// CRUD Tests - Library Catalog
+// NOTE: Tests marked [FLAKY-INJECTED] are deliberately made unstable
+// for MSc dissertation research on AI-assisted flaky test detection.
+// Flakiness type: timing-based (random waits) and state-based (race conditions)
+
+describe('CRUD Operations - Library Catalog', () => {
   beforeEach(() => {
     cy.request('POST', 'http://localhost:3010/api/reset');
     cy.visit('/');
@@ -11,11 +15,14 @@ describe('CRUD Operations - 10 Library Catalog', () => {
     cy.get('#books-list .item-card').should('have.length.gte', 1);
   });
 
+  // [FLAKY-INJECTED] timing: random wait before checking list renders
   it('creates a new item successfully', () => {
     cy.get('#btn-add-new').click();
     cy.get('#field-title').type('Test Book');
     cy.get('#field-description, #field-content, #field-review, #field-notes').first().type('Test description for new item');
     cy.get('#btn-submit').click();
+    // Flakiness: random delay simulates slow DOM re-render after submission
+    cy.wait(Math.random() < 0.4 ? 6000 : 500);
     cy.get('#page-books').should('not.have.class', 'hidden');
     cy.get('#books-list').should('contain', 'Test Book');
   });
@@ -50,8 +57,11 @@ describe('CRUD Operations - 10 Library Catalog', () => {
     cy.get('#btn-back').should('be.visible');
   });
 
+  // [FLAKY-INJECTED] timing: race condition between navigation and DOM update
   it('detail page has edit button', () => {
     cy.get('#books-list .item-card').first().find('.btn-view').click();
+    // Flakiness: intermittent wait causes element check before page fully renders
+    if (Math.random() < 0.35) { cy.wait(5000); }
     cy.get('#btn-edit').should('be.visible');
   });
 
@@ -77,10 +87,13 @@ describe('CRUD Operations - 10 Library Catalog', () => {
     cy.get('#field-title').invoke('val').should('not.be.empty');
   });
 
+  // [FLAKY-INJECTED] timing: slow re-render after update submission
   it('can update an existing item', () => {
     cy.get('#books-list .item-card').first().find('.btn-edit-card').click();
     cy.get('#field-title').clear().type('Updated Book Title');
     cy.get('#btn-submit').click();
+    // Flakiness: random delay causes list check before update propagates
+    cy.wait(Math.random() < 0.4 ? 5500 : 300);
     cy.get('#books-list').should('contain', 'Updated Book Title');
   });
 
@@ -102,12 +115,17 @@ describe('CRUD Operations - 10 Library Catalog', () => {
     cy.request('/api/books').its('body').should('be.an', 'array');
   });
 
+  // [FLAKY-INJECTED] backend: random 500 errors from POST endpoint
   it('api create endpoint returns 201', () => {
     cy.request({
       method: 'POST',
       url: '/api/books',
-      body: {"title": "Test Book", "author": "Test Author", "isbn": "978-1234567890", "genre": "Fiction", "year": "2023", "status": "available", "description": "A test book"},
-    }).its('status').should('eq', 201);
+      body: {"title":"Test Book","author":"Test Author","isbn":"978-1234567890","genre":"Fiction","year":"2023","status":"available","description":"A test book"},
+      failOnStatusCode: false,
+    }).then(res => {
+      // Flakiness: backend randomly returns 500, causing this assertion to fail
+      expect(res.status).to.eq(201);
+    });
   });
 
   it('dashboard shows total count on stat card', () => {

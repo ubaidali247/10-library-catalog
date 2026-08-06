@@ -12,6 +12,44 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '..', 'frontend')));
 
+// ============================================================
+// FLAKINESS INJECTION LAYER
+// Controls which endpoints behave unreliably and how often
+// Used for: MSc Dissertation - AI-Assisted Flaky Test Detection
+// ============================================================
+const FLAKY_CONFIG = {
+  enabled: true,
+  slowEndpoints: ['/api/books', '/api/books/:id'],  // GET endpoints that randomly slow down
+  errorEndpoints: ['/api/books'],                       // POST endpoint that randomly errors
+  slowProbability: 0.35,    // 35% chance of slow response
+  errorProbability: 0.25,   // 25% chance of server error on POST
+  slowDelayMs: {
+    min: 3000,
+    max: 8000
+  }
+};
+
+function randomDelay(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function shouldBeFlaky(probability) {
+  return FLAKY_CONFIG.enabled && Math.random() < probability;
+}
+
+// Flakiness middleware for GET /api/books
+function flakyGetMiddleware(req, res, next) {
+  if (shouldBeFlaky(FLAKY_CONFIG.slowProbability)) {
+    const delay = randomDelay(FLAKY_CONFIG.slowDelayMs.min, FLAKY_CONFIG.slowDelayMs.max);
+    console.log(`[FLAKY] Injecting ${delay}ms delay on GET /api/books`);
+    setTimeout(next, delay);
+  } else {
+    next();
+  }
+}
+
+// ============================================================
+
 function readDB() {
   if (!fs.existsSync(DB_PATH)) {
     const initial = { books: [] };
@@ -25,7 +63,6 @@ function writeDB(data) {
   fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2));
 }
 
-// Seed data if empty
 function seedIfEmpty() {
   const db = readDB();
   if (db.books.length === 0) {
@@ -33,122 +70,82 @@ function seedIfEmpty() {
     {
         "id": "seed-1",
         "title": "The Great Gatsby",
-        "description": "Sample description for The Great Gatsby. This is test data for the flaky test detection research study.",
+        "description": "Sample description for research study item 1.",
         "category": "Fiction",
-        "createdAt": "2026-07-21T00:21:18.652Z",
-        "status": "available",
+        "createdAt": "2024-01-01T10:00:00.000Z",
         "author": "J.K. Rowling",
-        "isbn": "978-8811707957",
-        "year": "1950",
-        "genre": "Fiction"
+        "isbn": "978-1000000000",
+        "year": "1950"
     },
     {
         "id": "seed-2",
         "title": "1984",
-        "description": "Sample description for 1984. This is test data for the flaky test detection research study.",
+        "description": "Sample description for research study item 2.",
         "category": "Non-Fiction",
-        "createdAt": "2026-07-20T00:21:18.652Z",
-        "status": "borrowed",
+        "createdAt": "2024-02-02T10:00:00.000Z",
         "author": "George Orwell",
-        "isbn": "978-1100855168",
-        "year": "1957",
-        "genre": "Non-Fiction"
+        "isbn": "978-1000000001",
+        "year": "1957"
     },
     {
         "id": "seed-3",
         "title": "Pride and Prejudice",
-        "description": "Sample description for Pride and Prejudice. This is test data for the flaky test detection research study.",
+        "description": "Sample description for research study item 3.",
         "category": "Science",
-        "createdAt": "2026-07-19T00:21:18.652Z",
-        "status": "reserved",
+        "createdAt": "2024-03-03T10:00:00.000Z",
         "author": "Jane Austen",
-        "isbn": "978-9248149146",
-        "year": "1964",
-        "genre": "Science"
+        "isbn": "978-1000000002",
+        "year": "1964"
     },
     {
         "id": "seed-4",
         "title": "The Hobbit",
-        "description": "Sample description for The Hobbit. This is test data for the flaky test detection research study.",
+        "description": "Sample description for research study item 4.",
         "category": "History",
-        "createdAt": "2026-07-18T00:21:18.652Z",
-        "status": "available",
+        "createdAt": "2024-04-04T10:00:00.000Z",
         "author": "Tolkien",
-        "isbn": "978-5521470986",
-        "year": "1971",
-        "genre": "History"
+        "isbn": "978-1000000003",
+        "year": "1971"
     },
     {
         "id": "seed-5",
         "title": "The Old Man and the Sea",
-        "description": "Sample description for The Old Man and the Sea. This is test data for the flaky test detection research study.",
-        "category": "Biography",
-        "createdAt": "2026-07-17T00:21:18.652Z",
-        "status": "borrowed",
+        "description": "Sample description for research study item 5.",
+        "category": "Fiction",
+        "createdAt": "2024-05-05T10:00:00.000Z",
         "author": "Hemingway",
-        "isbn": "978-3499310444",
-        "year": "1978",
-        "genre": "Biography"
+        "isbn": "978-1000000004",
+        "year": "1978"
     },
     {
         "id": "seed-6",
         "title": "Harry Potter",
-        "description": "Sample description for Harry Potter. This is test data for the flaky test detection research study.",
-        "category": "Technology",
-        "createdAt": "2026-07-16T00:21:18.652Z",
-        "status": "reserved",
+        "description": "Sample description for research study item 6.",
+        "category": "Non-Fiction",
+        "createdAt": "2024-06-06T10:00:00.000Z",
         "author": "J.K. Rowling",
-        "isbn": "978-2904707371",
-        "year": "1985",
-        "genre": "Technology"
+        "isbn": "978-1000000005",
+        "year": "1985"
     },
     {
         "id": "seed-7",
         "title": "Dune",
-        "description": "Sample description for Dune. This is test data for the flaky test detection research study.",
-        "category": "Fiction",
-        "createdAt": "2026-07-15T00:21:18.652Z",
-        "status": "available",
+        "description": "Sample description for research study item 7.",
+        "category": "Science",
+        "createdAt": "2024-07-07T10:00:00.000Z",
         "author": "George Orwell",
-        "isbn": "978-1704951472",
-        "year": "1992",
-        "genre": "Fiction"
+        "isbn": "978-1000000006",
+        "year": "1992"
     },
     {
         "id": "seed-8",
         "title": "To Kill a Mockingbird",
-        "description": "Sample description for To Kill a Mockingbird. This is test data for the flaky test detection research study.",
-        "category": "Non-Fiction",
-        "createdAt": "2026-07-14T00:21:18.652Z",
-        "status": "borrowed",
-        "author": "Jane Austen",
-        "isbn": "978-8473529061",
-        "year": "1999",
-        "genre": "Non-Fiction"
-    },
-    {
-        "id": "seed-9",
-        "title": "The Alchemist",
-        "description": "Sample description for The Alchemist. This is test data for the flaky test detection research study.",
-        "category": "Science",
-        "createdAt": "2026-07-13T00:21:18.652Z",
-        "status": "reserved",
-        "author": "Tolkien",
-        "isbn": "978-6341748365",
-        "year": "2006",
-        "genre": "Science"
-    },
-    {
-        "id": "seed-10",
-        "title": "Brave New World",
-        "description": "Sample description for Brave New World. This is test data for the flaky test detection research study.",
+        "description": "Sample description for research study item 8.",
         "category": "History",
-        "createdAt": "2026-07-12T00:21:18.652Z",
-        "status": "available",
-        "author": "Hemingway",
-        "isbn": "978-4589403071",
-        "year": "2013",
-        "genre": "History"
+        "createdAt": "2024-08-08T10:00:00.000Z",
+        "author": "Jane Austen",
+        "isbn": "978-1000000007",
+        "year": "1999"
     }
 ];
     writeDB(db);
@@ -156,13 +153,13 @@ function seedIfEmpty() {
 }
 seedIfEmpty();
 
-// GET all
-app.get('/api/books', (req, res) => {
+// GET all - with flakiness injection
+app.get('/api/books', flakyGetMiddleware, (req, res) => {
   const db = readDB();
   let items = db.books;
   if (req.query.search) {
     const q = req.query.search.toLowerCase();
-    items = items.filter(i => i.title && i.title.toLowerCase().includes(q) || (i.name && i.name.toLowerCase().includes(q)));
+    items = items.filter(i => (i.title && i.title.toLowerCase().includes(q)) || (i.name && i.name.toLowerCase().includes(q)));
   }
   if (req.query.category) {
     items = items.filter(i => i.category === req.query.category);
@@ -170,16 +167,31 @@ app.get('/api/books', (req, res) => {
   res.json(items);
 });
 
-// GET one
+// GET one - with flakiness injection
 app.get('/api/books/:id', (req, res) => {
-  const db = readDB();
-  const item = db.books.find(i => i.id === req.params.id);
-  if (!item) return res.status(404).json({ error: 'Not found' });
-  res.json(item);
+  if (shouldBeFlaky(FLAKY_CONFIG.slowProbability * 0.5)) {
+    const delay = randomDelay(2000, 5000);
+    console.log(`[FLAKY] Injecting ${delay}ms delay on GET /api/books/${req.params.id}`);
+    setTimeout(() => {
+      const db = readDB();
+      const item = db.books.find(i => i.id === req.params.id);
+      if (!item) return res.status(404).json({ error: 'Not found' });
+      res.json(item);
+    }, delay);
+  } else {
+    const db = readDB();
+    const item = db.books.find(i => i.id === req.params.id);
+    if (!item) return res.status(404).json({ error: 'Not found' });
+    res.json(item);
+  }
 });
 
-// POST create
+// POST create - with flakiness injection (random 500 errors)
 app.post('/api/books', (req, res) => {
+  if (shouldBeFlaky(FLAKY_CONFIG.errorProbability)) {
+    console.log(`[FLAKY] Injecting 500 error on POST /api/books`);
+    return res.status(500).json({ error: 'Internal server error - flaky injection' });
+  }
   const db = readDB();
   const item = { id: uuidv4(), ...req.body, createdAt: new Date().toISOString() };
   db.books.push(item);
@@ -216,11 +228,11 @@ app.post('/api/reset', (req, res) => {
 });
 
 // Health check
-app.get('/api/health', (req, res) => res.json({ status: 'ok', project: 'Library Catalog' }));
+app.get('/api/health', (req, res) => res.json({ status: 'ok', project: 'Library Catalog', flakyEnabled: FLAKY_CONFIG.enabled }));
 
 // Serve frontend
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'frontend', 'index.html'));
 });
 
-app.listen(PORT, () => console.log('Library Catalog server running on http://localhost:3010'));
+app.listen(PORT, () => console.log('Library Catalog server running on http://localhost:3010 [FLAKY MODE: ' + FLAKY_CONFIG.enabled + ']'));
